@@ -225,6 +225,9 @@ int Platform_getCpuVcore() {
        fd = fopen("/sys/devices/platform/soc/1f02400.i2c/i2c-4/4-0065/regulator/regulator.5/microvolts", "r");
        if (!fd) {
            fd = fopen("/sys/devices/platform/ff3c0000.i2c/i2c-0/0-001b/regulator/regulator.12/microvolts", "r");
++          if (!fd) {
++              fd = fopen("/sys/devices/platform/vdd-center/regulator/regulator.5/microvolts", "r");
++          }
        }
    }
    if (fd) {
