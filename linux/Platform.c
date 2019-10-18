@@ -14,6 +14,10 @@ in the source distribution for its full text.
 
 #include "Meter.h"
 #include "CPUMeter.h"
+#include "CpuFreqMeter.h"
+#include "CpuTempMeter.h"
+#include "GpuTempMeter.h"
+#include "CpuVcoreMeter.h"
 #include "MemoryMeter.h"
 #include "SwapMeter.h"
 #include "TasksMeter.h"
@@ -22,6 +26,14 @@ in the source distribution for its full text.
 #include "ClockMeter.h"
 #include "HostnameMeter.h"
 #include "LinuxProcess.h"
+
+#ifdef WIN32
+#include <windows.h>
+#elif _POSIX_C_SOURCE >= 199309L
+#include <time.h>   /* for nanosleep */
+#else
+#include <unistd.h> /* for usleep */
+#endif
 
 #include <math.h>
 #include <assert.h>
@@ -35,6 +47,14 @@ in the source distribution for its full text.
 #include "BatteryMeter.h"
 #include "LinuxProcess.h"
 #include "SignalsPanel.h"
+#ifdef WIN32
+#include <windows.h>
+#elif _POSIX_C_SOURCE >= 199309L
+#include <time.h>   
+#else
+#include <unistd.h> 
+#endif
+#include <string.h> 
 }*/
 
 #ifndef CLAMP
@@ -45,6 +65,7 @@ ProcessField Platform_defaultFields[] = { PID, USER, PRIORITY, NICE, M_SIZE, M_R
 
 //static ProcessField defaultIoFields[] = { PID, IO_PRIORITY, USER, IO_READ_RATE, IO_WRITE_RATE, IO_RATE, COMM, 0 };
 
+int Platform_cpuBigLITTLE;
 int Platform_numberOfFields = LAST_PROCESSFIELD;
 
 const SignalItem Platform_signals[] = {
@@ -126,8 +147,163 @@ MeterClass* Platform_meterTypes[] = {
    &LeftCPUs2Meter_class,
    &RightCPUs2Meter_class,
    &BlankMeter_class,
+   &CpuTempMeter_class,
+   &CpuFreqMeter_class,
+   /* --- fix me --- &AllCpuFreqMeter_class, */
+   &CpuVcoreMeter_class,
+   &GpuTempMeter_class,
    NULL
 };
+
+/* cross-platform sleep function */
+void sleep_ms(int milliseconds) {
+#ifdef WIN32
+    Sleep(milliseconds);
+#elif _POSIX_C_SOURCE >= 199309L
+    struct timespec ts;
+    ts.tv_sec = milliseconds / 1000;
+    ts.tv_nsec = (milliseconds % 1000) * 1000000;
+    nanosleep(&ts, NULL);
+#else
+    usleep(milliseconds * 1000);
+#endif
+}
+
+int Platform_getGpuTemp() {
+   int Temp = 0;
+
+   FILE* fd = fopen("/sys/class/thermal/thermal_zone1/temp", "r");
+   if (!fd) {
+       fd = fopen("/sys/devices/virtual/thermal/thermal_zone1/temp", "r");
+   }
+   if (fd) {
+      int n = fscanf(fd, "%d", &Temp);
+      fclose(fd);
+      if (n <= 0) return 0;
+   }
+   return Temp;
+}
+
+
+int Platform_getCpuTemp() {
+   int Temp = 0;
+
+   FILE* fd = fopen("/sys/class/thermal/thermal_zone0/temp", "r");
+   if (!fd) {
+       fd = fopen("/sys/devices/virtual/thermal/thermal_zone0/temp", "r");
+   }
+   if (fd) {
+      int n = fscanf(fd, "%d", &Temp);
+      fclose(fd);
+      if (n <= 0) return 0;
+   }
+   return Temp;
+}
+
+int Platform_getCpuFreq(int cpu) {
+   int Freq = 0;
+   FILE* fd;
+   char szbuf[256];
+   // sleep_ms(30);
+   xSnprintf(szbuf, sizeof(szbuf), "/sys/devices/system/cpu/cpu%d/cpufreq/cpuinfo_cur_freq", cpu);
+   fd = fopen(szbuf, "r");
+   if (fd) {
+      int n;
+      n = fscanf(fd, "%d", &Freq);
+      fclose(fd);
+      if (n <= 0) return 0;
+   }
+   return Freq;
+}
+
+int Platform_getCpuVcore() {
+   int Vcore = 0;
+   FILE* fd;
+   // sleep_ms(10);
+   fd = fopen("/sys/devices/platform/soc/7081400.i2c/i2c-0/0-0036/regulator/regulator.1/microvolts", "r");
+   if (!fd) {
+       fd = fopen("/sys/devices/platform/soc/1f02400.i2c/i2c-4/4-0065/regulator/regulator.5/microvolts", "r");
+       if (!fd) {
+           fd = fopen("/sys/devices/platform/ff3c0000.i2c/i2c-0/0-001b/regulator/regulator.12/microvolts", "r");
+       }
+   }
+   if (fd) {
+      int n;
+      n = fscanf(fd, "%d", &Vcore);
+      fclose(fd);
+      if (n <= 0) return 0;
+   }
+   return Vcore;
+}
+
+int Platform_getCpuVcore_l() {
+   int Vcore = 0;
+   FILE* fd;
+   // sleep_ms(10);
+   fd = fopen("/sys/devices/platform/ff3c0000.i2c/i2c-0/0-001b/regulator/regulator.13/microvolts", "r");
+   if (fd) {
+      int n;
+      n = fscanf(fd, "%d", &Vcore);
+      fclose(fd);
+      if (n <= 0) return 0;
+   }
+   return Vcore;
+}
+
+int Platform_getCpuVcore_b() {
+   int Vcore = 0;
+   FILE* fd;
+   // sleep_ms(10);
+   fd = fopen("/sys/devices/platform/ff3c0000.i2c/i2c-0/0-0040/regulator/regulator.10/microvolts", "r");
+   if (fd) {
+      int n;
+      n = fscanf(fd, "%d", &Vcore);
+      fclose(fd);
+      if (n <= 0) return 0;
+   }
+   return Vcore;
+}
+
+
+int Platform_getCpuBigLITTLE() {
+    return Platform_cpuBigLITTLE;
+}
+
+int Platform_findCpuBigLITTLE(int cpucount, int *cpuBigLITTLE) {
+    char buf[256];
+    int n, prev, next;
+    FILE* fd;
+    
+    *cpuBigLITTLE = 0;
+    prev = next = -1;
+    int cpu = 0;
+    while (cpu < cpucount) {
+        xSnprintf(buf, sizeof(buf), "/sys/devices/system/cpu/cpu%d/cpufreq/cpuinfo_max_freq", cpu);
+        fd = fopen(buf, "r");
+        if (fd) {
+            n = fscanf(fd, "%d", &next);
+            fclose(fd);
+            if (n <= 0) 
+                break;
+            if (prev == -1) {
+                prev = next;
+            } else {
+                if (prev != next) {
+                    if (prev < next) {
+                        Platform_cpuBigLITTLE = cpu;
+                    } else {
+                        Platform_cpuBigLITTLE = cpu * -1; /* fix me */
+                    }
+                    *cpuBigLITTLE = Platform_cpuBigLITTLE;
+                    break;                    
+                }
+            }
+        }
+        cpu++;
+    }
+    return cpu;
+}
+
 
 int Platform_getUptime() {
    double uptime = 0;

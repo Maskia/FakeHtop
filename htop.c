@@ -192,6 +192,8 @@ int main(int argc, char** argv) {
    UsersTable* ut = UsersTable_new();
    ProcessList* pl = ProcessList_new(ut, flags.pidWhiteList, flags.userId);
    
+   Platform_findCpuBigLITTLE(pl->cpuCount, &pl->cpuBigLITTLE);
+
    Settings* settings = Settings_new(pl->cpuCount);
    pl->settings = settings;
 

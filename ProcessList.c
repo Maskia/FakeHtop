@@ -69,7 +69,7 @@ typedef struct ProcessList_ {
    unsigned long long int freeSwap;
 
    int cpuCount;
-
+   int cpuBigLITTLE;
 } ProcessList;
 
 ProcessList* ProcessList_new(UsersTable* ut, Hashtable* pidWhiteList, uid_t userId);

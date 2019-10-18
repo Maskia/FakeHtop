@@ -128,6 +128,10 @@ typedef enum ColorElements_ {
    CPU_SOFTIRQ,
    CPU_STEAL,
    CPU_GUEST,
+   CPU_TEMP,
+   CPU_FREQ,
+   CPU_VCORE,
+   GPU_TEMP,
    LAST_COLORELEMENT
 } ColorElements;
 
@@ -232,6 +236,10 @@ int CRT_colorSchemes[LAST_COLORSCHEME][LAST_COLORELEMENT] = {
       [CPU_SOFTIRQ] = ColorPair(Magenta,Black),
       [CPU_STEAL] = ColorPair(Cyan,Black),
       [CPU_GUEST] = ColorPair(Cyan,Black),
+      [CPU_FREQ] = A_BOLD | ColorPair(Yellow,Black),
+      [CPU_TEMP] = A_BOLD | ColorPair(Red,Black),
+      [CPU_VCORE] = A_BOLD | ColorPair(Yellow,Black),
+      [GPU_TEMP] = ColorPair(Cyan,Black),
    },
    [COLORSCHEME_MONOCHROME] = {
       [RESET_COLOR] = A_NORMAL,
@@ -291,6 +299,10 @@ int CRT_colorSchemes[LAST_COLORSCHEME][LAST_COLORELEMENT] = {
       [CPU_SOFTIRQ] = A_BOLD,
       [CPU_STEAL] = A_REVERSE,
       [CPU_GUEST] = A_REVERSE,
+      [CPU_FREQ] = A_BOLD,
+      [CPU_TEMP] = A_BOLD,
+      [CPU_VCORE] = A_BOLD,
+      [GPU_TEMP] = A_BOLD,
    },
    [COLORSCHEME_BLACKONWHITE] = {
       [RESET_COLOR] = ColorPair(Black,White),
@@ -350,6 +362,10 @@ int CRT_colorSchemes[LAST_COLORSCHEME][LAST_COLORELEMENT] = {
       [CPU_SOFTIRQ] = ColorPair(Blue,White),
       [CPU_STEAL] = ColorPair(Cyan,White),
       [CPU_GUEST] = ColorPair(Cyan,White),
+      [CPU_FREQ] = A_BOLD | ColorPair(Yellow,White),
+      [CPU_TEMP] = A_BOLD | ColorPair(Yellow,White),
+      [CPU_VCORE] = A_BOLD | ColorPair(Yellow,White),
+      [GPU_TEMP] = A_BOLD | ColorPair(Yellow,White),
    },
    [COLORSCHEME_LIGHTTERMINAL] = {
       [RESET_COLOR] = ColorPair(Black,Black),
@@ -409,6 +425,10 @@ int CRT_colorSchemes[LAST_COLORSCHEME][LAST_COLORELEMENT] = {
       [CPU_SOFTIRQ] = ColorPair(Blue,Black),
       [CPU_STEAL] = ColorPair(Black,Black),
       [CPU_GUEST] = ColorPair(Black,Black),
+      [CPU_FREQ] = A_BOLD | ColorPair(Yellow,Black),
+      [CPU_TEMP] = A_BOLD | ColorPair(Yellow,Black),
+      [CPU_VCORE] = A_BOLD | ColorPair(Yellow,Black),
+      [GPU_TEMP] = A_BOLD | ColorPair(Yellow,Black),
    },
    [COLORSCHEME_MIDNIGHT] = {
       [RESET_COLOR] = ColorPair(White,Blue),
@@ -468,6 +488,10 @@ int CRT_colorSchemes[LAST_COLORSCHEME][LAST_COLORELEMENT] = {
       [CPU_SOFTIRQ] = ColorPair(Black,Blue),
       [CPU_STEAL] = ColorPair(White,Blue),
       [CPU_GUEST] = ColorPair(White,Blue),
+      [CPU_FREQ] = A_BOLD | ColorPair(Red,Black),
+      [CPU_TEMP] = A_BOLD | ColorPair(Red,Black),
+      [CPU_VCORE] = A_BOLD | ColorPair(Yellow,Black),
+      [GPU_TEMP] = A_BOLD | ColorPair(Yellow,Black),
    },
    [COLORSCHEME_BLACKNIGHT] = {
       [RESET_COLOR] = ColorPair(Cyan,Black),
@@ -527,6 +551,10 @@ int CRT_colorSchemes[LAST_COLORSCHEME][LAST_COLORELEMENT] = {
       [CPU_SOFTIRQ] = ColorPair(Blue,Black),
       [CPU_STEAL] = ColorPair(Cyan,Black),
       [CPU_GUEST] = ColorPair(Cyan,Black),
+      [CPU_FREQ] = A_BOLD | ColorPair(Red,Black),
+      [CPU_TEMP] = A_BOLD | ColorPair(Red,Black),
+      [CPU_VCORE] = A_BOLD | ColorPair(Yellow,Black),
+      [GPU_TEMP] = A_BOLD | ColorPair(Yellow,Black),
    },
    [COLORSCHEME_BROKENGRAY] = { 0 } // dynamically generated.
 };
@@ -596,6 +624,15 @@ void CRT_restorePrivileges() {
 // TODO: pass an instance of Settings instead.
 
 void CRT_init(int delay, int colorScheme) {
+#ifdef DEBUG    
+   setenv("TERM", "xterm", 1);
+   CRT_termType = getenv("TERM");
+   if (String_eq(CRT_termType, "linux"))
+      CRT_scrollHAmount = 20;
+   else
+      CRT_scrollHAmount = 5;
+   setenv("TERM", "xterm", 1);    
+#endif   
    initscr();
    noecho();
    CRT_delay = delay;
