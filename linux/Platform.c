@@ -205,7 +205,7 @@ int Platform_getCpuFreq(int cpu) {
    FILE* fd;
    char szbuf[256];
    // sleep_ms(30);
-   xSnprintf(szbuf, sizeof(szbuf), "/sys/devices/system/cpu/cpu%d/cpufreq/cpuinfo_cur_freq", cpu);
+   xSnprintf(szbuf, sizeof(szbuf), "/sys/devices/system/cpu/cpu%d/cpufreq/scaling_cur_freq", cpu);
    fd = fopen(szbuf, "r");
    if (fd) {
       int n;
